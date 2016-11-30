@@ -34,6 +34,10 @@ only EA 11.1.  To generate the XML:
 - From the main toolbar, select:   
       Project > Model Import/Export > Export package to XMI
 
+## Credit
+
+Specgen was primarily developed by Brandon Shapiro and Chris Casinghino.
+
 ## Contact
 
 specgen is developed by Draper Labs. Contact Chris Casinghino
