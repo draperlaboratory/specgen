@@ -1,0 +1,29 @@
+name:                specgen
+version:             0.1.0.0
+synopsis:            A tool for translating state charts to CSP
+-- description:         
+license:             BSD3
+license-file:        LICENSE
+author:              Draper Laboratory
+-- maintainer:        
+-- copyright:           
+-- category:            
+build-type:          Simple
+-- extra-source-files:  
+cabal-version:       >=1.10
+
+executable specgen
+  main-is:             Main.hs
+  ghc-options:         -Wall -O2
+  default-extensions:  NamedFieldPuns, TupleSections
+
+  build-depends:       base >=4.8,
+                       set-monad >=0.2,
+                       containers >=0.5,
+                       HUnit >=1.2,
+                       xml >=1.3,
+                       mtl >=2.2,
+                       parsec >=3.1,
+                       cspretty >=1.0
+  hs-source-dirs:      src
+  default-language:    Haskell2010
