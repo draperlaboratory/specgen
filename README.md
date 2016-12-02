@@ -8,7 +8,7 @@ using refinement.
 
 ## Installation
 
-Specgen is written in Haskell and can be build with cabal, the Haskell package
+Specgen is written in Haskell and can be built with cabal, the Haskell package
 manager.  If you already have cabal installed, simply run `cabal install` from
 the top-level `specgen` directory.  This should install `specgen` to
 `~/.cabal/bin`.  You can add this directory to your path or move the binary
