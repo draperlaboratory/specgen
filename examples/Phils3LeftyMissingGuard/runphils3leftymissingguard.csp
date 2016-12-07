@@ -1,0 +1,99 @@
+include "phils3leftymissingguard.csp"
+
+ivMap = (|  f1 => 0, f2 => 0, f3 => 0 |) -- initial value map for local variables
+
+Value = { (-1)..5 } -- Range of local variable values (must allow for all used timer values)
+
+-- limits of 0 work if you use "In" but not timers
+tlim = 0 -- Upper limit on node timers
+gtlim = 0 -- Upper limit on global timer
+
+TValue  = {(-1)..tlim} -- node timer values
+GTValue = {(-1)..gtlim} -- global timer values
+
+-- Top level system.  Add optimizations around the body of this definition.
+RunSystem = ReducedSystem(ivMap, tlim, gtlim)
+
+-- The rest of the file shows how to check the property that "after sitting, a
+-- philosopher never stands without eating".
+-- 
+-- A convenient way to check that a trace never occurs in a system is to use a
+-- "watchdog process".  The idea is to build a processes that recognizes the
+-- disallowed sequence and issues an error event if it occurs.  This "watchdog"
+-- can then be synchronized with the system under test, and a refinement check
+-- canbe used to see if the composed system ever issues the error event.
+-- 
+-- We begin by identifying the events of interest for our property.  We define
+-- functions "sitEvent", "eatEvent" and "standEvent", which identify the
+-- transitions on which a philosopher sits, stands, or eats, respectively.
+
+sitEvent :: (Int) -> Event
+sitEvent(1) = transition.Phil1.Standing1___Sitting1
+sitEvent(2) = transition.Phil2.Standing2___Sitting2
+sitEvent(3) = transition.Phil3.Standing3___Sitting3
+
+eatEvent :: (Int) -> Event
+eatEvent(1) = transition.Sitting1Child.WaitingLeft1___Eating1
+eatEvent(2) = transition.Sitting2Child.WaitingRight2___Eating2
+eatEvent(3) = transition.Sitting3Child.WaitingRight3___Eating3
+
+standEvent :: (Int) -> Event
+standEvent(1) = transition.Phil1.Sitting1___Standing1
+standEvent(2) = transition.Phil2.Sitting2___Standing2
+standEvent(3) = transition.Phil3.Sitting3___Standing3
+
+-- Next we define the error event that will be thrown if a philosopher stands
+-- without eating.  It is parameterized by the number of the philosopher so that we
+-- may see who transgressed:
+phils :: {Int}
+phils = {1,2,3}
+
+channel stoodTooSoon : phils
+
+-- We implement a philosopher's watchdog as pair of mutually recursive
+-- processes.  The first process, "watchStanding", waits for a philosopher's
+-- "sit" event and transitions to "watchSitting".  The "watchSitting" process
+-- waits to see whether an "eat" event or a "stand" event comes next.  If "eat'
+-- occurs first, it waits for the "stand" event and then returns to
+-- watchStanding.  If "stand" occurs first, it throws the error.  The top-level
+-- watchdog is then the parallel composition of the watchdogs for each
+-- philosopher:
+
+watchStanding :: (Int) -> Proc
+watchStanding(i) = sitEvent(i) -> watchSitting(i)
+
+watchSitting :: (Int) -> Proc
+watchSitting(i) = (eatEvent(i) -> standEvent(i) -> watchStanding(i))
+               [] (standEvent(i) -> stoodTooSoon.i -> STOP)
+
+WatchDog :: Proc
+WatchDog = ||| i <- phils @ watchStanding(i)
+
+
+-- We define a set "parallelEvents" of the events of interest for our property.
+-- The original system and the watchdog are placed in parallel and required to
+-- synchronize on these events, so that the watchdog can keep track of the
+-- system as it executes.
+parallelEvents :: {Event}
+parallelEvents = { sitEvent(i), standEvent(i), eatEvent(i) | i <- phils }
+
+WatchdogSystem :: Proc
+WatchdogSystem = (RunSystem [| parallelEvents |] WatchDog) |\ {| stoodTooSoon |}
+
+-- Finally, we state the property that the error event can never occur in the
+-- composed system.  This uses the projection operator described in the race
+-- condition example in Phils3Lefty.  The assertion says that the system where
+-- only the error event is visible is a refinement of "STOP", the
+-- system which performs no events.
+
+assert STOP [T= WatchdogSystem
+
+-- Since this system is missing the trigger on the edge from Sitting2 to
+-- Standing2, the property fails. According
+-- to the StateMate semantics of statecharts, transitions between higher-level
+-- nodes are preferred when a choice is available.  So, the modified chart will
+-- transition out of \sctext{Sitting2} immediately after entering it.  When we ask
+-- FDR to check the property for this modified version of the chart, it reports:
+--
+--  Result: Failed
+--  Error Event: stoodTooSoon.2

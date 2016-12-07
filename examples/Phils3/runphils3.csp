@@ -1,0 +1,17 @@
+include "phils3.csp"
+
+ivMap = (|  f1 => 0, f2 => 0, f3 => 0 |) -- initial value map for local variables
+
+Value = { (-1)..5 } -- Range of local variable values (must allow for all used timer values)
+
+-- limits of 0 work if you use "In" but not timers
+tlim = 0 -- Upper limit on node timers
+gtlim = 0 -- Upper limit on global timer
+
+TValue  = {(-1)..tlim} -- node timer values
+GTValue = {(-1)..gtlim} -- global timer values
+
+-- Top level system.  Add optimizations around the body of this definition.
+RunSystem = ReducedSystem(ivMap, tlim, gtlim)
+
+assert RunSystem \ {| tock |} :[deadlock free] 

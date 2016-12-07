@@ -1,0 +1,227 @@
+include "sgbase.csp"
+
+andChildren = (| Sitting2 => {Sitting2Child}, Sitting1 => {Sitting1Child}, Sitting3 => {Sitting3Child} |)
+
+ControlRoot = (tock?_ -> Controller) [] (complete.EA_Region1 -> SKIP)
+
+datatype Trigger = Completed.(CompLabel)
+
+datatype NodeLabel = Phil1Holds3 | Fork2_Initial | Standing1 | WaitingRight1 | Phil1_Initial | Sitting2 | Free2 | Standing2 | Free3 | WaitingLeft1 | Philosophers | ReplacedRight3 | Sitting3_Initial | Eating3 | Phil3Holds3 | Phil3Holds2 | Sitting1_Initial | DoneEating2 | Free1 | DoneEating1 | Phil2_Initial | Sitting1 | ReplacedRight2 | ReplacedRight1 | Eating2 | Phil2Holds2 | WaitingLeft3 | Fork3_Initial | Standing3 | Phil1Holds1 | Fork1_Initial | DoneEating3 | Sitting2_Initial | Eating1 | Phil3_Initial | WaitingRight3 | WaitingLeft2 | Phil2Holds1 | Initial | Sitting3 | WaitingRight2 | Phil1 | Fork1 | Phil2 | Fork2 | Phil3 | Fork3 | EA_Region1 | Sitting1Child | Sitting2Child | Sitting3Child
+
+datatype Variable = f1 | f2 | f3
+
+datatype EdgeLabel = Fork1_Initial___Free1 | Free2___Phil2Holds2 | Phil2Holds1___Free1 | Standing2___Sitting2 | Free1___Phil1Holds1 | Phil3Holds2___Free2 | Standing1___Sitting1 | Phil1_Initial___Standing1 | Fork3_Initial___Free3 | ReplacedRight2___DoneEating2 | Sitting1_Initial___WaitingLeft1 | Phil1Holds1___Free1 | WaitingRight1___Eating1 | Phil3Holds3___Free3 | Standing3___Sitting3 | WaitingLeft2___WaitingRight2 | ReplacedRight1___DoneEating1 | Eating1___ReplacedRight1 | Free1___Phil2Holds1 | Sitting3___Standing3 | Fork2_Initial___Free2 | Free3___Phil3Holds3 | Phil2Holds2___Free2 | WaitingRight2___Eating2 | Eating3___ReplacedRight3 | WaitingRight3___Eating3 | Phil1Holds3___Free3 | Sitting1___Standing1 | Eating2___ReplacedRight2 | Sitting2_Initial___WaitingLeft2 | WaitingLeft3___WaitingRight3 | Sitting2___Standing2 | Initial___Philosophers | Sitting3_Initial___WaitingLeft3 | WaitingLeft1___WaitingRight1 | ReplacedRight3___DoneEating3 | Free3___Phil1Holds3 | Phil3_Initial___Standing3 | Free2___Phil3Holds2 | Phil2_Initial___Standing2
+
+EventLabel :: {Trigger}
+
+EventLabel = {}
+
+subtype ChartLabel = Phil1 | Fork1 | Phil2 | Fork2 | Phil3 | Fork3 | EA_Region1 | Sitting1Child | Sitting2Child | Sitting3Child
+
+subtype TmrLabel = WaitingRight1 | WaitingLeft1 | ReplacedRight3 | Eating3 | ReplacedRight2 | ReplacedRight1 | Eating2 | WaitingLeft3 | Eating1 | WaitingRight3 | WaitingLeft2 | WaitingRight2
+
+subtype CompLabel = Sitting2 | Sitting1 | Sitting3 | EA_Region1 | Sitting1Child | Sitting2Child | Sitting3Child
+
+Root = ControlRoot [| {| step, transition.EA_Region1, proceed.EA_Region1, stable.EA_Region1, complete.EA_Region1 |} |] Initial__CONTROL
+
+Controller = getInput?input -> (ControlRoot [] ((proceed.EA_Region1.input -> ((step -> Controller) [] (stable.EA_Region1 -> ControlRoot))) [] (((True and True) & (transition.EA_Region1.Initial___Philosophers -> (step -> Controller))) [] STOP)))
+
+Philosophers__CONTROL = Philosophers__PROC /\ STOP
+
+Initial__CONTROL = Initial__PROC /\ ((transition.EA_Region1.Initial___Philosophers -> (step -> Philosophers__CONTROL)) [] STOP)
+
+Philosophers__PROC = Phil1__PROC [| {| step, proceed.EA_Region1, stable.EA_Region1 |} |] (Fork1__PROC [| {| step, proceed.EA_Region1, stable.EA_Region1 |} |] (Phil2__PROC [| {| step, proceed.EA_Region1, stable.EA_Region1 |} |] (Fork2__PROC [| {| step, proceed.EA_Region1, stable.EA_Region1 |} |] (Phil3__PROC [| {| step, proceed.EA_Region1, stable.EA_Region1 |} |] Fork3__PROC))))
+
+Phil1__PROC = Phil1__CONTROL [| {| step, transition.Phil1, proceed.Phil1, stable.Phil1 |} |] Phil1_Initial__CONTROL
+
+Phil1__CONTROL = proceed.EA_Region1?input -> (((stable.EA_Region1 -> (Phil1__CONTROL [] (step -> Phil1__CONTROL))) [] (step -> Phil1__CONTROL)) [] ((proceed.Phil1.input -> ((step -> Phil1__CONTROL) [] (stable.Phil1 -> ((stable.EA_Region1 -> (Phil1__CONTROL [] (step -> Phil1__CONTROL))) [] (step -> Phil1__CONTROL))))) [] (((True and True) & (transition.Phil1.Standing1___Sitting1 -> (step -> Phil1__CONTROL))) [] (((True and True) & (transition.Phil1.Phil1_Initial___Standing1 -> (step -> Phil1__CONTROL))) [] ((((member(Completed.Sitting1, input)) and True) & (transition.Phil1.Sitting1___Standing1 -> (usedEvent.(Completed.Sitting1) -> (step -> Phil1__CONTROL)))) [] STOP)))))
+
+Standing1__CONTROL = Standing1__PROC /\ ((transition.Phil1.Standing1___Sitting1 -> (step -> Sitting1__CONTROL)) [] STOP)
+
+Phil1_Initial__CONTROL = Phil1_Initial__PROC /\ ((transition.Phil1.Phil1_Initial___Standing1 -> (step -> Standing1__CONTROL)) [] STOP)
+
+Sitting1__CONTROL = Sitting1__PROC /\ ((transition.Phil1.Sitting1___Standing1 -> (step -> (endTime.WaitingRight1 -> (endTime.WaitingLeft1 -> (endTime.ReplacedRight1 -> (endTime.Eating1 -> Standing1__CONTROL)))))) [] STOP)
+
+Standing1__PROC = Basic
+
+Phil1_Initial__PROC = Basic
+
+Sitting1__PROC = ((Sitting1Child__PROC [| {| complete |} |] (AndCompletes(Sitting1, {}))) [[ isComplete <- (complete.Sitting1) ]]) [| {complete.Sitting1} |] (complete.Sitting1 -> STOP)
+
+Sitting1Child__PROC = Sitting1Child__CONTROL [| {| step, transition.Sitting1Child, proceed.Sitting1Child, stable.Sitting1Child |} |] Sitting1_Initial__CONTROL
+
+Sitting1Child__CONTROL = proceed.Phil1?input -> (read.f1?f1196 -> (read.f3?f3198 -> (((stable.Phil1 -> (Sitting1Child__CONTROL [] (step -> Sitting1Child__CONTROL))) [] (step -> Sitting1Child__CONTROL)) [] (((True and True) & (transition.Sitting1Child.Sitting1_Initial___WaitingLeft1 -> (step -> Sitting1Child__CONTROL))) [] (((True and (f1196 == 1)) & (transition.Sitting1Child.WaitingRight1___Eating1 -> (step -> Sitting1Child__CONTROL))) [] (((True and (f3198 != 1)) & (transition.Sitting1Child.ReplacedRight1___DoneEating1 -> (step -> Sitting1Child__CONTROL))) [] (((True and (f1196 != 1)) & (transition.Sitting1Child.Eating1___ReplacedRight1 -> (step -> Sitting1Child__CONTROL))) [] (((True and (f3198 == 1)) & (transition.Sitting1Child.WaitingLeft1___WaitingRight1 -> (step -> Sitting1Child__CONTROL))) [] STOP))))))))
+
+WaitingRight1__CONTROL = (startTime.WaitingRight1 -> WaitingRight1__PROC) /\ ((transition.Sitting1Child.WaitingRight1___Eating1 -> (step -> (endTime.WaitingRight1 -> (endTime.WaitingRight1 -> Eating1__CONTROL)))) [] STOP)
+
+WaitingLeft1__CONTROL = (startTime.WaitingLeft1 -> WaitingLeft1__PROC) /\ ((transition.Sitting1Child.WaitingLeft1___WaitingRight1 -> (step -> (endTime.WaitingLeft1 -> (endTime.WaitingLeft1 -> WaitingRight1__CONTROL)))) [] STOP)
+
+Sitting1_Initial__CONTROL = Sitting1_Initial__PROC /\ ((transition.Sitting1Child.Sitting1_Initial___WaitingLeft1 -> (step -> WaitingLeft1__CONTROL)) [] STOP)
+
+DoneEating1__CONTROL = DoneEating1__PROC /\ STOP
+
+ReplacedRight1__CONTROL = (startTime.ReplacedRight1 -> ReplacedRight1__PROC) /\ ((transition.Sitting1Child.ReplacedRight1___DoneEating1 -> (step -> (endTime.ReplacedRight1 -> (endTime.ReplacedRight1 -> DoneEating1__CONTROL)))) [] STOP)
+
+Eating1__CONTROL = (startTime.Eating1 -> Eating1__PROC) /\ ((transition.Sitting1Child.Eating1___ReplacedRight1 -> (step -> (endTime.Eating1 -> (endTime.Eating1 -> ReplacedRight1__CONTROL)))) [] STOP)
+
+WaitingRight1__PROC = Basic
+
+WaitingLeft1__PROC = Basic
+
+Sitting1_Initial__PROC = Basic
+
+DoneEating1__PROC = Finalize__(Sitting1Child)
+
+ReplacedRight1__PROC = Basic
+
+Eating1__PROC = Basic
+
+Fork1__PROC = Fork1__CONTROL [| {| step, transition.Fork1, proceed.Fork1, stable.Fork1 |} |] Fork1_Initial__CONTROL
+
+Fork1__CONTROL = proceed.EA_Region1?input -> (read.f1?f1196 -> (getTime.WaitingRight1?tmrWaitingRight1 -> (getTime.ReplacedRight2?tmrReplacedRight2 -> (getTime.Eating1?tmrEating1 -> (getTime.WaitingLeft2?tmrWaitingLeft2 -> (((stable.EA_Region1 -> (Fork1__CONTROL [] (step -> Fork1__CONTROL))) [] (step -> Fork1__CONTROL)) [] (((True and True) & (transition.Fork1.Fork1_Initial___Free1 -> (step -> Fork1__CONTROL))) [] (((True and (tmrReplacedRight2 != -1)) & (transition.Fork1.Phil2Holds1___Free1 -> (write.f1.0 -> (step -> Fork1__CONTROL)))) [] (((True and (tmrWaitingRight1 != -1)) & (transition.Fork1.Free1___Phil1Holds1 -> (write.f1.1 -> (step -> Fork1__CONTROL)))) [] (((True and (tmrEating1 != -1)) & (transition.Fork1.Phil1Holds1___Free1 -> (write.f1.0 -> (step -> Fork1__CONTROL)))) [] (((True and (tmrWaitingLeft2 != -1)) & (transition.Fork1.Free1___Phil2Holds1 -> (write.f1.2 -> (step -> Fork1__CONTROL)))) [] STOP)))))))))))
+
+Free1__CONTROL = Free1__PROC /\ ((transition.Fork1.Free1___Phil1Holds1 -> (step -> Phil1Holds1__CONTROL)) [] ((transition.Fork1.Free1___Phil2Holds1 -> (step -> Phil2Holds1__CONTROL)) [] STOP))
+
+Phil1Holds1__CONTROL = Phil1Holds1__PROC /\ ((transition.Fork1.Phil1Holds1___Free1 -> (step -> Free1__CONTROL)) [] STOP)
+
+Fork1_Initial__CONTROL = Fork1_Initial__PROC /\ ((transition.Fork1.Fork1_Initial___Free1 -> (step -> Free1__CONTROL)) [] STOP)
+
+Phil2Holds1__CONTROL = Phil2Holds1__PROC /\ ((transition.Fork1.Phil2Holds1___Free1 -> (step -> Free1__CONTROL)) [] STOP)
+
+Free1__PROC = Basic
+
+Phil1Holds1__PROC = Basic
+
+Fork1_Initial__PROC = Basic
+
+Phil2Holds1__PROC = Basic
+
+Phil2__PROC = Phil2__CONTROL [| {| step, transition.Phil2, proceed.Phil2, stable.Phil2 |} |] Phil2_Initial__CONTROL
+
+Phil2__CONTROL = proceed.EA_Region1?input -> (((stable.EA_Region1 -> (Phil2__CONTROL [] (step -> Phil2__CONTROL))) [] (step -> Phil2__CONTROL)) [] ((proceed.Phil2.input -> ((step -> Phil2__CONTROL) [] (stable.Phil2 -> ((stable.EA_Region1 -> (Phil2__CONTROL [] (step -> Phil2__CONTROL))) [] (step -> Phil2__CONTROL))))) [] (((True and True) & (transition.Phil2.Standing2___Sitting2 -> (step -> Phil2__CONTROL))) [] ((((member(Completed.Sitting2, input)) and True) & (transition.Phil2.Sitting2___Standing2 -> (usedEvent.(Completed.Sitting2) -> (step -> Phil2__CONTROL)))) [] (((True and True) & (transition.Phil2.Phil2_Initial___Standing2 -> (step -> Phil2__CONTROL))) [] STOP)))))
+
+Sitting2__CONTROL = Sitting2__PROC /\ ((transition.Phil2.Sitting2___Standing2 -> (step -> (endTime.ReplacedRight2 -> (endTime.Eating2 -> (endTime.WaitingLeft2 -> (endTime.WaitingRight2 -> Standing2__CONTROL)))))) [] STOP)
+
+Standing2__CONTROL = Standing2__PROC /\ ((transition.Phil2.Standing2___Sitting2 -> (step -> Sitting2__CONTROL)) [] STOP)
+
+Phil2_Initial__CONTROL = Phil2_Initial__PROC /\ ((transition.Phil2.Phil2_Initial___Standing2 -> (step -> Standing2__CONTROL)) [] STOP)
+
+Sitting2__PROC = ((Sitting2Child__PROC [| {| complete |} |] (AndCompletes(Sitting2, {}))) [[ isComplete <- (complete.Sitting2) ]]) [| {complete.Sitting2} |] (complete.Sitting2 -> STOP)
+
+Sitting2Child__PROC = Sitting2Child__CONTROL [| {| step, transition.Sitting2Child, proceed.Sitting2Child, stable.Sitting2Child |} |] Sitting2_Initial__CONTROL
+
+Sitting2Child__CONTROL = proceed.Phil2?input -> (read.f1?f1196 -> (read.f2?f2197 -> (((stable.Phil2 -> (Sitting2Child__CONTROL [] (step -> Sitting2Child__CONTROL))) [] (step -> Sitting2Child__CONTROL)) [] (((True and (f1196 != 2)) & (transition.Sitting2Child.ReplacedRight2___DoneEating2 -> (step -> Sitting2Child__CONTROL))) [] (((True and (f1196 == 2)) & (transition.Sitting2Child.WaitingLeft2___WaitingRight2 -> (step -> Sitting2Child__CONTROL))) [] (((True and (f2197 == 2)) & (transition.Sitting2Child.WaitingRight2___Eating2 -> (step -> Sitting2Child__CONTROL))) [] (((True and (f2197 != 2)) & (transition.Sitting2Child.Eating2___ReplacedRight2 -> (step -> Sitting2Child__CONTROL))) [] (((True and True) & (transition.Sitting2Child.Sitting2_Initial___WaitingLeft2 -> (step -> Sitting2Child__CONTROL))) [] STOP))))))))
+
+DoneEating2__CONTROL = DoneEating2__PROC /\ STOP
+
+ReplacedRight2__CONTROL = (startTime.ReplacedRight2 -> ReplacedRight2__PROC) /\ ((transition.Sitting2Child.ReplacedRight2___DoneEating2 -> (step -> (endTime.ReplacedRight2 -> (endTime.ReplacedRight2 -> DoneEating2__CONTROL)))) [] STOP)
+
+Eating2__CONTROL = (startTime.Eating2 -> Eating2__PROC) /\ ((transition.Sitting2Child.Eating2___ReplacedRight2 -> (step -> (endTime.Eating2 -> (endTime.Eating2 -> ReplacedRight2__CONTROL)))) [] STOP)
+
+Sitting2_Initial__CONTROL = Sitting2_Initial__PROC /\ ((transition.Sitting2Child.Sitting2_Initial___WaitingLeft2 -> (step -> WaitingLeft2__CONTROL)) [] STOP)
+
+WaitingLeft2__CONTROL = (startTime.WaitingLeft2 -> WaitingLeft2__PROC) /\ ((transition.Sitting2Child.WaitingLeft2___WaitingRight2 -> (step -> (endTime.WaitingLeft2 -> (endTime.WaitingLeft2 -> WaitingRight2__CONTROL)))) [] STOP)
+
+WaitingRight2__CONTROL = (startTime.WaitingRight2 -> WaitingRight2__PROC) /\ ((transition.Sitting2Child.WaitingRight2___Eating2 -> (step -> (endTime.WaitingRight2 -> (endTime.WaitingRight2 -> Eating2__CONTROL)))) [] STOP)
+
+DoneEating2__PROC = Finalize__(Sitting2Child)
+
+ReplacedRight2__PROC = Basic
+
+Eating2__PROC = Basic
+
+Sitting2_Initial__PROC = Basic
+
+WaitingLeft2__PROC = Basic
+
+WaitingRight2__PROC = Basic
+
+Standing2__PROC = Basic
+
+Phil2_Initial__PROC = Basic
+
+Fork2__PROC = Fork2__CONTROL [| {| step, transition.Fork2, proceed.Fork2, stable.Fork2 |} |] Fork2_Initial__CONTROL
+
+Fork2__CONTROL = proceed.EA_Region1?input -> (read.f2?f2197 -> (getTime.ReplacedRight3?tmrReplacedRight3 -> (getTime.Eating2?tmrEating2 -> (getTime.WaitingLeft3?tmrWaitingLeft3 -> (getTime.WaitingRight2?tmrWaitingRight2 -> (((stable.EA_Region1 -> (Fork2__CONTROL [] (step -> Fork2__CONTROL))) [] (step -> Fork2__CONTROL)) [] (((True and (tmrWaitingRight2 != -1)) & (transition.Fork2.Free2___Phil2Holds2 -> (write.f2.2 -> (step -> Fork2__CONTROL)))) [] (((True and (tmrReplacedRight3 != -1)) & (transition.Fork2.Phil3Holds2___Free2 -> (write.f2.0 -> (step -> Fork2__CONTROL)))) [] (((True and True) & (transition.Fork2.Fork2_Initial___Free2 -> (step -> Fork2__CONTROL))) [] (((True and (tmrEating2 != -1)) & (transition.Fork2.Phil2Holds2___Free2 -> (write.f2.0 -> (step -> Fork2__CONTROL)))) [] (((True and (tmrWaitingLeft3 != -1)) & (transition.Fork2.Free2___Phil3Holds2 -> (write.f2.3 -> (step -> Fork2__CONTROL)))) [] STOP)))))))))))
+
+Fork2_Initial__CONTROL = Fork2_Initial__PROC /\ ((transition.Fork2.Fork2_Initial___Free2 -> (step -> Free2__CONTROL)) [] STOP)
+
+Free2__CONTROL = Free2__PROC /\ ((transition.Fork2.Free2___Phil2Holds2 -> (step -> Phil2Holds2__CONTROL)) [] ((transition.Fork2.Free2___Phil3Holds2 -> (step -> Phil3Holds2__CONTROL)) [] STOP))
+
+Phil3Holds2__CONTROL = Phil3Holds2__PROC /\ ((transition.Fork2.Phil3Holds2___Free2 -> (step -> Free2__CONTROL)) [] STOP)
+
+Phil2Holds2__CONTROL = Phil2Holds2__PROC /\ ((transition.Fork2.Phil2Holds2___Free2 -> (step -> Free2__CONTROL)) [] STOP)
+
+Fork2_Initial__PROC = Basic
+
+Free2__PROC = Basic
+
+Phil3Holds2__PROC = Basic
+
+Phil2Holds2__PROC = Basic
+
+Phil3__PROC = Phil3__CONTROL [| {| step, transition.Phil3, proceed.Phil3, stable.Phil3 |} |] Phil3_Initial__CONTROL
+
+Phil3__CONTROL = proceed.EA_Region1?input -> (((stable.EA_Region1 -> (Phil3__CONTROL [] (step -> Phil3__CONTROL))) [] (step -> Phil3__CONTROL)) [] ((proceed.Phil3.input -> ((step -> Phil3__CONTROL) [] (stable.Phil3 -> ((stable.EA_Region1 -> (Phil3__CONTROL [] (step -> Phil3__CONTROL))) [] (step -> Phil3__CONTROL))))) [] (((True and True) & (transition.Phil3.Standing3___Sitting3 -> (step -> Phil3__CONTROL))) [] ((((member(Completed.Sitting3, input)) and True) & (transition.Phil3.Sitting3___Standing3 -> (usedEvent.(Completed.Sitting3) -> (step -> Phil3__CONTROL)))) [] (((True and True) & (transition.Phil3.Phil3_Initial___Standing3 -> (step -> Phil3__CONTROL))) [] STOP)))))
+
+Standing3__CONTROL = Standing3__PROC /\ ((transition.Phil3.Standing3___Sitting3 -> (step -> Sitting3__CONTROL)) [] STOP)
+
+Phil3_Initial__CONTROL = Phil3_Initial__PROC /\ ((transition.Phil3.Phil3_Initial___Standing3 -> (step -> Standing3__CONTROL)) [] STOP)
+
+Sitting3__CONTROL = Sitting3__PROC /\ ((transition.Phil3.Sitting3___Standing3 -> (step -> (endTime.ReplacedRight3 -> (endTime.Eating3 -> (endTime.WaitingLeft3 -> (endTime.WaitingRight3 -> Standing3__CONTROL)))))) [] STOP)
+
+Standing3__PROC = Basic
+
+Phil3_Initial__PROC = Basic
+
+Sitting3__PROC = ((Sitting3Child__PROC [| {| complete |} |] (AndCompletes(Sitting3, {}))) [[ isComplete <- (complete.Sitting3) ]]) [| {complete.Sitting3} |] (complete.Sitting3 -> STOP)
+
+Sitting3Child__PROC = Sitting3Child__CONTROL [| {| step, transition.Sitting3Child, proceed.Sitting3Child, stable.Sitting3Child |} |] Sitting3_Initial__CONTROL
+
+Sitting3Child__CONTROL = proceed.Phil3?input -> (read.f2?f2197 -> (read.f3?f3198 -> (((stable.Phil3 -> (Sitting3Child__CONTROL [] (step -> Sitting3Child__CONTROL))) [] (step -> Sitting3Child__CONTROL)) [] (((True and (f3198 != 3)) & (transition.Sitting3Child.Eating3___ReplacedRight3 -> (step -> Sitting3Child__CONTROL))) [] (((True and (f3198 == 3)) & (transition.Sitting3Child.WaitingRight3___Eating3 -> (step -> Sitting3Child__CONTROL))) [] (((True and (f2197 == 3)) & (transition.Sitting3Child.WaitingLeft3___WaitingRight3 -> (step -> Sitting3Child__CONTROL))) [] (((True and True) & (transition.Sitting3Child.Sitting3_Initial___WaitingLeft3 -> (step -> Sitting3Child__CONTROL))) [] (((True and (f2197 != 3)) & (transition.Sitting3Child.ReplacedRight3___DoneEating3 -> (step -> Sitting3Child__CONTROL))) [] STOP))))))))
+
+ReplacedRight3__CONTROL = (startTime.ReplacedRight3 -> ReplacedRight3__PROC) /\ ((transition.Sitting3Child.ReplacedRight3___DoneEating3 -> (step -> (endTime.ReplacedRight3 -> (endTime.ReplacedRight3 -> DoneEating3__CONTROL)))) [] STOP)
+
+Sitting3_Initial__CONTROL = Sitting3_Initial__PROC /\ ((transition.Sitting3Child.Sitting3_Initial___WaitingLeft3 -> (step -> WaitingLeft3__CONTROL)) [] STOP)
+
+Eating3__CONTROL = (startTime.Eating3 -> Eating3__PROC) /\ ((transition.Sitting3Child.Eating3___ReplacedRight3 -> (step -> (endTime.Eating3 -> (endTime.Eating3 -> ReplacedRight3__CONTROL)))) [] STOP)
+
+WaitingLeft3__CONTROL = (startTime.WaitingLeft3 -> WaitingLeft3__PROC) /\ ((transition.Sitting3Child.WaitingLeft3___WaitingRight3 -> (step -> (endTime.WaitingLeft3 -> (endTime.WaitingLeft3 -> WaitingRight3__CONTROL)))) [] STOP)
+
+DoneEating3__CONTROL = DoneEating3__PROC /\ STOP
+
+WaitingRight3__CONTROL = (startTime.WaitingRight3 -> WaitingRight3__PROC) /\ ((transition.Sitting3Child.WaitingRight3___Eating3 -> (step -> (endTime.WaitingRight3 -> (endTime.WaitingRight3 -> Eating3__CONTROL)))) [] STOP)
+
+ReplacedRight3__PROC = Basic
+
+Sitting3_Initial__PROC = Basic
+
+Eating3__PROC = Basic
+
+WaitingLeft3__PROC = Basic
+
+DoneEating3__PROC = Finalize__(Sitting3Child)
+
+WaitingRight3__PROC = Basic
+
+Fork3__PROC = Fork3__CONTROL [| {| step, transition.Fork3, proceed.Fork3, stable.Fork3 |} |] Fork3_Initial__CONTROL
+
+Fork3__CONTROL = proceed.EA_Region1?input -> (read.f3?f3198 -> (getTime.WaitingLeft1?tmrWaitingLeft1 -> (getTime.Eating3?tmrEating3 -> (getTime.ReplacedRight1?tmrReplacedRight1 -> (getTime.WaitingRight3?tmrWaitingRight3 -> (((stable.EA_Region1 -> (Fork3__CONTROL [] (step -> Fork3__CONTROL))) [] (step -> Fork3__CONTROL)) [] (((True and True) & (transition.Fork3.Fork3_Initial___Free3 -> (step -> Fork3__CONTROL))) [] (((True and (tmrEating3 != -1)) & (transition.Fork3.Phil3Holds3___Free3 -> (write.f3.0 -> (step -> Fork3__CONTROL)))) [] (((True and (tmrWaitingRight3 != -1)) & (transition.Fork3.Free3___Phil3Holds3 -> (write.f3.3 -> (step -> Fork3__CONTROL)))) [] (((True and (tmrReplacedRight1 != -1)) & (transition.Fork3.Phil1Holds3___Free3 -> (write.f3.0 -> (step -> Fork3__CONTROL)))) [] (((True and (tmrWaitingLeft1 != -1)) & (transition.Fork3.Free3___Phil1Holds3 -> (write.f3.1 -> (step -> Fork3__CONTROL)))) [] STOP)))))))))))
+
+Phil1Holds3__CONTROL = Phil1Holds3__PROC /\ ((transition.Fork3.Phil1Holds3___Free3 -> (step -> Free3__CONTROL)) [] STOP)
+
+Free3__CONTROL = Free3__PROC /\ ((transition.Fork3.Free3___Phil3Holds3 -> (step -> Phil3Holds3__CONTROL)) [] ((transition.Fork3.Free3___Phil1Holds3 -> (step -> Phil1Holds3__CONTROL)) [] STOP))
+
+Phil3Holds3__CONTROL = Phil3Holds3__PROC /\ ((transition.Fork3.Phil3Holds3___Free3 -> (step -> Free3__CONTROL)) [] STOP)
+
+Fork3_Initial__CONTROL = Fork3_Initial__PROC /\ ((transition.Fork3.Fork3_Initial___Free3 -> (step -> Free3__CONTROL)) [] STOP)
+
+Phil1Holds3__PROC = Basic
+
+Free3__PROC = Basic
+
+Phil3Holds3__PROC = Basic
+
+Fork3_Initial__PROC = Basic
+
+Initial__PROC = Basic

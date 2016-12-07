@@ -1,0 +1,36 @@
+include "phils3leftyracecondition.csp"
+
+ivMap = (|  f1 => 0, f2 => 0, f3 => 0 |) -- initial value map for local variables
+
+Value = { (-1)..5 } -- Range of local variable values (must allow for all used timer values)
+
+-- limits of 0 work if you use "In" but not timers
+tlim = 0 -- Upper limit on node timers
+gtlim = 0 -- Upper limit on global timer
+
+TValue  = {(-1)..tlim} -- node timer values
+GTValue = {(-1)..gtlim} -- global timer values
+
+-- Top level system.  Add optimizations around the body of this definition.
+RunSystem = ReducedSystem(ivMap, tlim, gtlim)
+
+-- This checks that there are no race conditions on variable writes in the chart
+-- (i.e., no two subcharts will ever attempt to write to the same variable in
+-- the same step).
+--
+-- The |\ ("projection") operator here allows us to see _only_ the projected
+-- events from the system.  In this case, we project only the "writeError"
+-- event, and check that the resulting system refines "STOP", the process that
+-- performs no events.  The assertion "P [T= Q" is true only when every finite
+-- trace of Q is also a trace of of P.  So we're checking that, when we look at
+-- only the "writeError" events indicating a race condition, we see no events.
+--
+-- In this system, we've intentionally introduced a race condition where a typo
+-- in Fork2 allows it to write to "f1" instead of "f2".  Thus, two forks may
+-- write to "f1" in the same step.  Checking the assertion below will find this
+-- error.  FDR reports:
+--
+--     Result: Failed
+--     Error Event: writeError.f1
+assert STOP [T= RunSystem |\ {| writeError |}
+

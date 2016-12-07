@@ -1,0 +1,90 @@
+external prioritise
+transparent normal, diamond, wbisim
+
+System(ivMap, tLimit, gtLimit) = prioritise(Tracked(ivMap, tLimit, gtLimit)
+                                            [| {| read, write, getGlobalTime, getTime,
+                                                  startTime, endTime, getInput, usedEvent,
+                                                  complete, step, tock |} |]
+                                            Root,
+                                            < {| complete, startTime, endTime |},
+                                              {| writeError |},
+                                              {| transition |},
+                                              {| getInput, proceed |},
+                                              {| tock, stable |},
+                                              {| step |} >)
+
+ReducedSystem(ivMap, tLimit, gtLimit) =
+   System(ivMap, tLimit, gtLimit)
+     |\ {| transition, write, tock, writeError |}
+
+channel step, isComplete, writeError', startTime', endTime'
+channel startTime, endTime : TmrLabel
+channel getTime            : TmrLabel.TValue
+channel getTime'           : TValue
+channel getGlobalTime      : GTValue
+channel read,  write       : Variable.Value
+channel read', write'      : Value
+channel tock               : Set (EventLabel)
+channel getInput           : Set (Trigger)
+channel usedEvent          : Trigger
+channel transition         : ChartLabel.EdgeLabel
+channel proceed            : ChartLabel.(Set (Trigger))
+channel stable             : ChartLabel
+channel complete           : CompLabel
+channel writeError         : Variable
+
+Var  (val, val', noWrite) =    (read'.val     -> Var(val, val', noWrite))
+                            [] (write'?newval -> if noWrite
+                                                 then (writeError' -> Var(val, newval, True))
+                                                 else Var(val, newval, True))
+                            [] (step          -> Var(val', val', False))
+
+Vars(ivMap) = ([| {| step |} |] label : Variable @ let ival = mapLookup(ivMap, label)
+                                                   within (Var(ival, ival, False)
+                                                           [[ read' <- read.label,
+                                                              write'      <- write.label,
+                                                              writeError' <- writeError.label ]]))
+
+Timer(  -1, tLimit) =    (getTime'.(-1) -> Timer(  -1, tLimit))
+                      [] (startTime'    -> Timer(   0, tLimit))
+                      [] (endTime'      -> Timer(  -1, tLimit))
+                      [] (tock?_        -> Timer(  -1, tLimit))
+
+Timer(time, tLimit) =    (getTime'.time -> Timer(time, tLimit))
+                      [] (endTime'      -> Timer(  -1, tLimit))
+                      [] (tock?_ -> if time == tLimit
+                                    then Timer(time, tLimit)
+                                    else Timer((time + 1) % (tLimit + 1), tLimit))
+
+GlobalTimer(time, gtLimit) =    (getGlobalTime.time -> GlobalTimer(time, gtLimit))
+                             [] (tock?_ -> if time == gtLimit
+                                           then GlobalTimer(time, gtLimit)
+                                           else GlobalTimer((time + 1) % (gtLimit + 1), gtLimit))
+
+Timers(tLimit, gtLimit) =
+  if empty(TmrLabel) then
+    GlobalTimer (-1,gtLimit)
+  else 
+    ([| {| tock |} |] label : TmrLabel @ (Timer(-1, tLimit)
+                                            [[ getTime'   <- getTime.label,
+                                               startTime' <- startTime.label,
+                                               endTime'   <- endTime.label ]]))
+    [| {| tock |} |] GlobalTimer(-1, gtLimit)
+
+Inputs(tset) =    (tock?input     -> Inputs(input))
+               [] (getInput.tset  -> Inputs(tset))
+               [] (usedEvent?newt -> Inputs(diff (tset, {newt})))
+               [] (complete?label -> Inputs(union(tset, {Completed.label})))
+
+AndCompletes(label, nodeset) = complete?newlabel ->
+                    let newset = union(nodeset, {newlabel})
+                    within if contains(mapLookup(andChildren, label), newset)
+                           then isComplete -> STOP
+                           else AndCompletes(label, newset)
+
+contains(set1, set2) = not member(False, { member(label, set2) | label <- set1 })
+
+Tracked(ivMap, tLimit, gtLimit) = Vars(ivMap) ||| (Inputs({}) [| {| tock |} |] Timers(tLimit, gtLimit))
+
+Finalize__(t) = complete.t -> Basic
+Basic    = step -> Basic
