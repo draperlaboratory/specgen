@@ -1,0 +1,55 @@
+include "sgbase.csp"
+
+andChildren = (| |)
+
+ControlRoot = (tock?_ -> Controller) [] (complete.EA_Region1 -> SKIP)
+
+datatype Trigger = Completed.(CompLabel)
+
+datatype NodeLabel = C | A_Initial | B | A | Initial | D | EA_Region1 | AChild
+
+datatype Variable = x
+
+datatype EdgeLabel = B___C | A___D | A_Initial___B | Initial___A | B___B
+
+EventLabel :: {Trigger}
+
+EventLabel = {}
+
+subtype ChartLabel = EA_Region1 | AChild
+
+subtype TmrLabel = A
+
+subtype CompLabel = EA_Region1 | AChild
+
+Root = ControlRoot [| {| step, transition.EA_Region1, proceed.EA_Region1, stable.EA_Region1, complete.EA_Region1 |} |] Initial__CONTROL
+
+Controller = getInput?input -> (read.x?x30 -> (getTime.A?tmrA -> (ControlRoot [] ((proceed.EA_Region1.input -> ((step -> Controller) [] (stable.EA_Region1 -> ControlRoot))) [] (((True and (tmrA > 2)) & (transition.EA_Region1.A___D -> (step -> Controller))) [] (((True and True) & (transition.EA_Region1.Initial___A -> (write.x.0 -> (step -> Controller)))) [] STOP))))))
+
+A__CONTROL = (startTime.A -> A__PROC) /\ ((transition.EA_Region1.A___D -> (step -> (endTime.A -> (endTime.A -> D__CONTROL)))) [] STOP)
+
+Initial__CONTROL = Initial__PROC /\ ((transition.EA_Region1.Initial___A -> (step -> A__CONTROL)) [] STOP)
+
+D__CONTROL = D__PROC /\ STOP
+
+A__PROC = AChild__PROC
+
+AChild__PROC = AChild__CONTROL [| {| step, transition.AChild, proceed.AChild, stable.AChild |} |] A_Initial__CONTROL
+
+AChild__CONTROL = proceed.EA_Region1?input -> (read.x?x30 -> (getTime.A?tmrA -> (((stable.EA_Region1 -> (AChild__CONTROL [] (step -> AChild__CONTROL))) [] (step -> AChild__CONTROL)) [] (((True and (x30 == 5)) & (transition.AChild.B___C -> (step -> AChild__CONTROL))) [] (((True and True) & (transition.AChild.A_Initial___B -> (step -> AChild__CONTROL))) [] (((True and ((x30 < 5) and (tmrA > x30))) & (transition.AChild.B___B -> (write.x.(x30 + 1) -> (step -> AChild__CONTROL)))) [] STOP))))))
+
+C__CONTROL = C__PROC /\ STOP
+
+A_Initial__CONTROL = A_Initial__PROC /\ ((transition.AChild.A_Initial___B -> (step -> B__CONTROL)) [] STOP)
+
+B__CONTROL = B__PROC /\ ((transition.AChild.B___C -> (step -> C__CONTROL)) [] ((transition.AChild.B___B -> (step -> B__CONTROL)) [] STOP))
+
+C__PROC = Finalize__(AChild)
+
+A_Initial__PROC = Basic
+
+B__PROC = Basic
+
+Initial__PROC = Basic
+
+D__PROC = Finalize__(EA_Region1)

@@ -1,0 +1,43 @@
+include "timertest.csp"
+
+ivMap = (|  x => 0 |) -- initial value map for local variables
+
+Value = { (-1)..5 } -- Range of local variable values (must allow for all used timer values)
+
+-- limits of 0 work if you use "In" but not timers
+tlim = 5 -- Upper limit on node timers
+gtlim = 5 -- Upper limit on global timer
+
+TValue  = {(-1)..tlim} -- node timer values
+GTValue = {(-1)..gtlim} -- global timer values
+
+-- Top level system.  Add optimizations around the body of this definition.
+RunSystem = ReducedSystem(ivMap, tlim, gtlim)
+
+-- For this system, our specification describes the possible writes to the
+-- variable x.  The system is simple enough that we can give a complete spec for
+-- what writes will happen, and confirm this is the only possible behavior via
+-- mutual refinement.
+--
+-- The interesting thing about this system is that the node out of state A will
+-- happen before the loop inside A finishes completion.  This occurs because the
+-- guard on the transition out of A will become true before the loop is done,
+-- and this higher level transition has higher priority in the statemate
+-- semantics.
+--
+-- Note that node timers record how many "supersteps" of the system have
+-- occured.  A super step is a sequence of individual steps that eventually lead
+-- to a system that can make no more transitions, at which point new input is
+-- taken and another superstep occurs.  We're making these supersteps occur here
+-- via the timer check in the guard on B's loop edge.  Without that guard, our
+-- specification would be wrong because all of A could run in one superstep.
+tmrSpec :: Proc
+tmrSpec = write.x.0 -> write.x.1 -> write.x.2 -> STOP
+
+-- As we're interested in only variable writes, we define the system where
+-- everything else is hidden.
+WriteOnlySystem :: Proc
+WriteOnlySystem = RunSystem |\ {| write |}
+
+assert WriteOnlySystem [T= tmrSpec
+assert tmrSpec [T= WriteOnlySystem

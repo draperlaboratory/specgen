@@ -14,7 +14,9 @@ Each example is in its own subdirectory `foo`.  That subdirectory contains a num
    without building specgen locally)
 
 - `runfoo.csp`: A top-level "driver" containing the initial state of the system
-  and example specifications.  This is the file to load in FDR.
+  and example specifications.  This file typically contains, in comments, a more
+  detailed description of the interesting aspects of the system and the property
+  we check.  This is the file to load in FDR.
 
 - `sgbase.csp`: A high-level "library" of useful definitions used by every
   statechart translation.
@@ -50,3 +52,8 @@ eating", to validate the previous example.
 This is the same as "Phils3Lefty", except that an error has been introduced in
 one fork for the purpose of showing how to check for race conditions in variable
 writes.
+
+## TimerTest
+
+This example demonstrates the per-node timers in a simple system involving a
+loop.
