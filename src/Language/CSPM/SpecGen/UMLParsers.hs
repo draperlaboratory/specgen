@@ -81,8 +81,7 @@ exprTerm = m_parens exprParser
                     return $ EIf g e1 e2 }
 
 guardParser :: Parser Guard
-guardParser = m_whiteSpace >> (guardParser' <* eof) where
-  guardParser' = buildExpressionParser guardTable guardTerm <?> "guard"
+guardParser = buildExpressionParser guardTable guardTerm <?> "guard"
 
 guardTable :: OprTable Guard
 guardTable = [ [Prefix (m_reservedOp "~"  >> return GNot)],
@@ -124,7 +123,7 @@ actionTerm = m_parens actionParser
                              return (Assign (Var (Id v)) e) } )
 
 parseGuard :: String -> Guard
-parseGuard s = case parse guardParser "" s of
+parseGuard s = case parse (guardParser <* eof) "" s of
                  Left err -> error $ "Error while parsing guard: " ++ show err
                  Right g  -> g
 
